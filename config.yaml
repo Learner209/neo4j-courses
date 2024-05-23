@@ -1,0 +1,25 @@
+databases:
+  CS1604:
+    port: "7474"
+    username: "neo4j"
+    password: "11111111"
+  CS1605:
+    port: "7476"
+    username: "neo4j"
+    password: "11111111"
+  DAG:
+    port: "7478"
+    username: "neo4j"
+    password: "11111111"
+  OS:
+    port: "7480"
+    username: "neo4j"
+    password: "11111111"
+  UNIVERSITY_PHYSICS_1:
+    port: "7482"
+    username: "neo4j"
+    password: "11111111"
+  UNIVERSITY_PHYSICS_2:
+    port: "7484"
+    username: "neo4j"
+    password: "11111111"
