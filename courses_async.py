@@ -61,6 +61,7 @@ async def lifespan(app: FastAPI, filepath: str):
 def get_driver(course) -> neo4j.AsyncDriver:
     return SHARED_CONTEXT["driver"][course]
 
+from fastapi.middleware.cors import CORSMiddleware
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--port", type=int, default=8080)
@@ -70,6 +71,14 @@ parser.add_argument("--database_dir", type=str, default="~/neo4j-instances")
 args = parser.parse_args()
 
 app = FastAPI(lifespan=lambda app: lifespan(app, args.config_path))
+origins = ["*"]
+app.add_middleware(
+        CORSMiddleware,
+        allow_origins=origins,
+        allow_credentials=True,
+        allow_methods=["*"],
+        allow_headers=["*"],
+)
 
 
 @app.get("/")

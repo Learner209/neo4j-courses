@@ -20,7 +20,7 @@ RUN apt-get update && apt-get install -y \
     rm -rf /var/lib/apt/lists/*
 
 # Copy requirements file
-COPY requirements.txt /tmp/
+COPY ./requirements.txt /tmp/
 
 # upgrade pip
 RUN pip install --upgrade pip
@@ -62,7 +62,7 @@ RUN chmod +x /app/entrypoint.sh
 
 USER courses
 
-RUN ./build-neo4j-instances.sh ./neo4j_prompts
+RUN ["/bin/bash", "./build-neo4j-instances.sh", "./neo4j_prompts"]
 
-CMD ["bash", "/app/entrypoint.sh"]
-# CMD ["tail", "-f", "/dev/null"]
+# CMD ["/bin/bash", "./entrypoint.sh", "&&" , "tail", "-f", "/dev/null"]
+CMD ["/bin/bash", "./entrypoint.sh"]

@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 
 # Directory for neo4j instances
 instancesDirectory="$HOME/neo4j-instances"

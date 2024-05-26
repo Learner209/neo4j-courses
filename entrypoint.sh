@@ -1,4 +1,3 @@
-#!/bin/bash
 cd /home/courses/neo4j-instances/ports && ls | xargs -I{} /bin/bash -c 'cd {}; ./bin/neo4j start; cd ..;'
 
 cd /app

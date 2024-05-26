@@ -1,4 +1,3 @@
-#!/usr/bin/env bash
 
 bash_version=`echo $BASH_VERSION |sed -e  "s/[^0-9\.]//g"`;
 
