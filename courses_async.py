@@ -31,6 +31,7 @@ async def lifespan(app: FastAPI, filepath: str):
         config = yaml.safe_load(file)
     SHARED_CONTEXT["driver"] = {}
     SHARED_CONTEXT["config"] = {}
+    SHARED_CONTEXT["vote"] = {}
     for course in COURSES:
         port = config["databases"][course]["port"]
         database_path = os.path.join(args.database_dir, "ports", port)
@@ -53,6 +54,7 @@ async def lifespan(app: FastAPI, filepath: str):
             db_config["url"], auth=(db_config["username"], db_config["password"])
         )
         SHARED_CONTEXT["config"][course] = db_config
+        SHARED_CONTEXT["vote"][course] = 0
     yield
     for driver in SHARED_CONTEXT["driver"].values():
         await driver.close()
@@ -60,6 +62,7 @@ async def lifespan(app: FastAPI, filepath: str):
 
 def get_driver(course) -> neo4j.AsyncDriver:
     return SHARED_CONTEXT["driver"][course]
+
 
 from fastapi.middleware.cors import CORSMiddleware
 
@@ -73,11 +76,11 @@ args = parser.parse_args()
 app = FastAPI(lifespan=lambda app: lifespan(app, args.config_path))
 origins = ["*"]
 app.add_middleware(
-        CORSMiddleware,
-        allow_origins=origins,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
+    CORSMiddleware,
+    allow_origins=origins,
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 
@@ -231,30 +234,153 @@ async def get_course_search(q: Optional[str] = None):
 
 @app.get("/search/course/rel")
 async def get_course_rel_search(q: Optional[str] = None):
-    # Not tested, don't use...
+    if q is None:
+        raise HTTPException(status_code=400, detail="Query parameter is required")
+
     ans = []
     for course in COURSES:
         results = await get_driver(course).execute_query(
             f"""
-                MATCH ()-[r]->()
-                WHERE ANY(key IN keys(r)
-                          WHERE apoc.meta.type(r[key]) = 'STRING_ARRAY' AND
-                                ANY(item IN r[key] WHERE toString(item) CONTAINS 'search_query') OR
-                                apoc.meta.type(r[key]) <> 'STRING_ARRAY' AND toString(r[key]) CONTAINS 'search_query')
-                RETURN r
+            MATCH (a)-[r]->(b) WHERE toString(TYPE(r)) CONTAINS "{q}" or r.name CONTAINS "{q}" return a,b,r;
             """,
             title=q,
             database_=DATABASE,
             routing_="r",
             result_transformer_=neo4j.AsyncResult.data,
         )
+        results = [result for result in results if result["a"] and result["b"]]
         ans.extend(results)
+
+    print(ans)
     if not ans:
         raise HTTPException(status_code=404, detail="Course not found")
-    print(ans)
-    ans = [single_ans["n"] for single_ans in ans if single_ans["n"]]
 
-    return ans
+    # Assume we want to return only the 'r' part of each result
+    return [single_ans["r"] for single_ans in ans]
+
+
+@app.get("/create/entities/{title}")
+async def create_node(title: str):
+    if title not in COURSES:
+        raise HTTPException(status_code=404, detail="Course not found")
+    alias = "os_concepts"
+    node_type = "INTERRUPT"
+    properties = {"context": "thread", "os": "linux"}
+    query = f"CREATE ({alias}:{node_type} $properties) " f"RETURN {alias}"
+    results = await get_driver(title).execute_query(query_=query, properties=properties)
+    # Note: node with the exactly the same params is allowed to be created multiple times
+    return results
+
+
+@app.get("/update/entities/{title}")
+async def update_node(title: str):
+    if title not in COURSES:
+        raise HTTPException(status_code=404, detail="Course not found")
+    identifying_property = "debugging"
+    new_properties = {"utils": "gdb"}
+    node_type = "Entity"
+    query = (
+        f"MATCH (n:{node_type}) "
+        "WHERE n.name = $name "
+        "SET n += $new_properties "
+        "RETURN n"
+    )
+    print(query)
+    results = await get_driver(title).execute_query(
+        query_=query, name=identifying_property, new_properties=new_properties
+    )
+    print(results)
+
+
+@app.get("/delete/entities/{title}")
+async def delete_node(title: str):
+    node_type = "Entity"
+    identifying_property = "debugging"
+    query = f"MATCH (n:{node_type}) " "WHERE n.name = $name " "DETACH DELETE n"
+    print(query)
+    results = await get_driver(title).execute_query(
+        query_=query, name=identifying_property
+    )
+
+    print(results)
+
+
+@app.get("/create/rel/{title}")
+async def create_rel(title: str):
+    if title not in COURSES:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    # Define nodes and rel properties
+    node_type1 = "Entity"
+    node_type2 = "Entity"
+    name1 = "StanfordCppLib"
+    name2 = "Queue"
+    rel_type = "USES"
+    properties = {"method": "exclusive"}
+
+    # Cypher query to create a rel
+    query = (
+        f"MATCH (a:{node_type1}), (b:{node_type2}) "
+        f"WHERE a.name = $name1 AND b.name = $name2 "
+        f"CREATE (a)-[r:{rel_type} $properties]->(b) "
+        f"RETURN a, r, b"
+    )
+    results = await get_driver(title).execute_query(
+        query_=query, name1=name1, name2=name2, properties=properties
+    )
+    return results
+
+
+@app.get("/update/rel/{title}")
+async def update_rel(title: str):
+    if title not in COURSES:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    name1 = "mingw32-make"
+    name2 = "Makefile linux"
+    rel_type = "RELATED_To"
+    new_properties = {"method": "shared"}
+
+    # Cypher query to update a rel
+    query = (
+        f"MATCH (a)-[r:{rel_type}]->(b) "
+        f"WHERE a.name = $name1 AND b.name = $name2 "
+        f"SET r += $new_properties "
+        f"RETURN a, r, b"
+    )
+    results = await get_driver(title).execute_query(
+        query_=query, name1=name1, name2=name2, new_properties=new_properties
+    )
+    return results
+
+
+@app.get("/delete/rel/{title}")
+async def delete_rel(title: str):
+    if title not in COURSES:
+        raise HTTPException(status_code=404, detail="Course not found")
+
+    rel_type = "RELATED_TO"
+    name1 = "mingw32-make"
+    name2 = "Makefile linux"
+
+    # Cypher query to delete a rel
+    query = (
+        f"MATCH (a)-[r:{rel_type}]->(b) "
+        f"WHERE a.name = $name1 AND b.name = $name2 "
+        f"DELETE r"
+    )
+    results = await get_driver(title).execute_query(
+        query_=query, name1=name1, name2=name2
+    )
+    return results
+
+
+@app.get("/vote/course/{title}")
+async def vote_course(title: str):
+    if title not in COURSES:
+        raise HTTPException(status_code=404, detail="Course not found")
+    SHARED_CONTEXT["vote"][title] += 1
+    return 1
 
 
 if __name__ == "__main__":
