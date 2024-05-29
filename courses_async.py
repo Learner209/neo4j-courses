@@ -3,10 +3,10 @@ import argparse
 import logging
 import os
 from contextlib import asynccontextmanager
-from typing import Optional, cast
+from typing import Optional, cast, Dict
 
 import neo4j
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, Depends, Request
 from fastapi.responses import FileResponse
 from neo4j import AsyncGraphDatabase
 import yaml
@@ -259,13 +259,21 @@ async def get_course_rel_search(q: Optional[str] = None):
     return [single_ans["r"] for single_ans in ans]
 
 
+async def parse_request_body(request: Request):
+    return await request.json()
+
+
 @app.get("/create/entities/{title}")
-async def create_node(title: str):
+# async def create_node(title: str, alias: str, node_type: str, properties: dict):
+async def create_node(title: str, create_data: Dict = Depends(parse_request_body)):
     if title not in COURSES:
         raise HTTPException(status_code=404, detail="Course not found")
-    alias = "os_concepts"
-    node_type = "INTERRUPT"
-    properties = {"context": "thread", "os": "linux"}
+    alias = create_data["alias"]
+    node_type = create_data["node_type"]
+    properties = create_data["properties"]
+    # alias = "os_concepts"
+    # node_type = "INTERRUPT"
+    # properties = {"context": "thread", "os": "linux"}
     query = f"CREATE ({alias}:{node_type} $properties) " f"RETURN {alias}"
     results = await get_driver(title).execute_query(query_=query, properties=properties)
     # Note: node with the exactly the same params is allowed to be created multiple times
@@ -273,12 +281,16 @@ async def create_node(title: str):
 
 
 @app.get("/update/entities/{title}")
-async def update_node(title: str):
+async def update_node(title: str, update_data: Dict = Depends(parse_request_body)):
     if title not in COURSES:
         raise HTTPException(status_code=404, detail="Course not found")
-    identifying_property = "debugging"
-    new_properties = {"utils": "gdb"}
-    node_type = "Entity"
+    identifying_property = update_data["identifying_property"]
+    new_properties = update_data["new_properties"]
+    node_type = update_data["node_type"]
+    # identifying_property = "debugging"
+    # new_properties = {"utils": "gdb"}
+    # node_type = "Entity"
+    print(identifying_property, new_properties, node_type)
     query = (
         f"MATCH (n:{node_type}) "
         "WHERE n.name = $name "
@@ -293,9 +305,14 @@ async def update_node(title: str):
 
 
 @app.get("/delete/entities/{title}")
-async def delete_node(title: str):
-    node_type = "Entity"
-    identifying_property = "debugging"
+async def delete_node(title: str, delete_data: Dict = Depends(parse_request_body)):
+    if title not in COURSES:
+        raise HTTPException(status_code=404, detail="Course not found")
+    identifying_property = delete_data["identifying_property"]
+    node_type = delete_data["node_type"]
+    # node_type = "Entity"
+    # identifying_property = "debugging"
+    print(node_type, identifying_property)
     query = f"MATCH (n:{node_type}) " "WHERE n.name = $name " "DETACH DELETE n"
     print(query)
     results = await get_driver(title).execute_query(
@@ -306,18 +323,30 @@ async def delete_node(title: str):
 
 
 @app.get("/create/rel/{title}")
-async def create_rel(title: str):
+async def create_rel(
+    title: str,
+    create_data: Dict = Depends(parse_request_body),
+):
     if title not in COURSES:
         raise HTTPException(status_code=404, detail="Course not found")
 
     # Define nodes and rel properties
-    node_type1 = "Entity"
-    node_type2 = "Entity"
-    name1 = "StanfordCppLib"
-    name2 = "Queue"
-    rel_type = "USES"
-    properties = {"method": "exclusive"}
+    node_type1 = create_data["node_type1"]
+    node_type2 = create_data["node_type2"]
 
+    name1 = create_data["name1"]
+    name2 = create_data["name2"]
+    rel_type = create_data["rel_type"]
+    properties = create_data["properties"]
+
+    # node_type1 = "Entity"
+    # node_type2 = "Entity"
+    # name1 = "StanfordCppLib"
+    # name2 = "Queue"
+    # rel_type = "USES"
+    # properties = {"method": "exclusive"}
+
+    print(node_type1, node_type2, name1, name2, rel_type, properties)
     # Cypher query to create a rel
     query = (
         f"MATCH (a:{node_type1}), (b:{node_type2}) "
@@ -332,15 +361,22 @@ async def create_rel(title: str):
 
 
 @app.get("/update/rel/{title}")
-async def update_rel(title: str):
+async def update_rel(title: str, update_data: Dict = Depends(parse_request_body)):
     if title not in COURSES:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    name1 = "mingw32-make"
-    name2 = "Makefile linux"
-    rel_type = "RELATED_To"
-    new_properties = {"method": "shared"}
+    # Define nodes and rel properties
+    name1 = update_data["name1"]
+    name2 = update_data["name2"]
+    rel_type = update_data["rel_type"]
+    new_properties = update_data["new_properties"]
 
+    # name1 = "mingw32-make"
+    # name2 = "Makefile linux"
+    # rel_type = "RELATED_To"
+    # new_properties = {"method": "shared"}
+
+    print(name1, name2, rel_type, new_properties)
     # Cypher query to update a rel
     query = (
         f"MATCH (a)-[r:{rel_type}]->(b) "
@@ -355,14 +391,20 @@ async def update_rel(title: str):
 
 
 @app.get("/delete/rel/{title}")
-async def delete_rel(title: str):
+async def delete_rel(title: str, delete_data: Dict = Depends(parse_request_body)):
     if title not in COURSES:
         raise HTTPException(status_code=404, detail="Course not found")
 
-    rel_type = "RELATED_TO"
-    name1 = "mingw32-make"
-    name2 = "Makefile linux"
+    # Define nodes and rel properties
+    rel_type = delete_data["rel_type"]
+    name1 = delete_data["name1"]
+    name2 = delete_data["name2"]
 
+    # rel_type = "RELATED_TO"
+    # name1 = "mingw32-make"
+    # name2 = "Makefile linux"
+
+    print(rel_type, name1, name2)
     # Cypher query to delete a rel
     query = (
         f"MATCH (a)-[r:{rel_type}]->(b) "
