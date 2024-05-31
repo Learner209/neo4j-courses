@@ -31,15 +31,22 @@ API 端点描述
     描述: 为通过其标题识别的特定课程增加投票计数器。此功能演示了数据库中管理计数器更新的简单方法。
 
 
-| 端点                     | 方法 | 描述                                     | 参数（关键）                                                      | 输出示例     | 输入示例                                                                                           |
-|--------------------------|------|------------------------------------------|-------------------------------------------------------------------|--------------|----------------------------------------------------------------------------------------------------|
-| /search/course           | GET  | 搜索包含查询字符串的节点的属性。         | q (查询字符串)                                                    | 节点列表     | https://localhost:{port}/search/course?q=physics                                                   |
-| /search/course/rel       | GET  | 按类型或名称搜索包含查询字符串的关系。   | q (查询字符串)                                                    | 关系列表     | https://localhost:{port}/search/course/rel?q=physics                                               |
-| /create/entities/{title} | GET  | 使用特定属性创建新节点。                 | title, alias, node_type, properties                               | 节点创建结果 | [create entities](tests/course_async_test.py#L9)                                                  |
-| /update/entities/{title} | GET  | 更新通过唯一属性识别的节点的属性。       | title, identifying_property, new_properties, node_type            | 更新后的节点 | [update entities](tests/course_async_test.py#L20)                                                  |
-| /delete/entities/{title} | GET  | 删除节点及其关系。                       | title, node_type, identifying_property                            | 删除结果     | [delete entities](tests/course_async_test.py#L31)                                                  |
-| /create/rel/{title}      | GET  | 创建两个指定节点之间带有指定属性的关系。 | title, node_type1, node_type2, name1, name2, rel_type, properties | 关系创建结果 | [create rels](tests/course_async_test.py#L38)                                                      |
-| /update/rel/{title}      | GET  | 更新两个节点之间关系的属性。             | title, name1, name2, rel_type, new_properties                     | 更新后的关系 | [update rels](tests/course_async_test.py#L52)                                                      |
-| /delete/rel/{title}      | GET  | 删除两个节点之间的关系。                 | title, rel_type, name1, name2                                     | 删除结果     | [delete rels](tests/course_async_test.py#L64)                                                      |
-| /vote/course/{title}     | GET  | 为课程增加投票计数器。                   | title                                                             | 投票增加结果 | https://localhsot:{port}/vote/course/CS1605                                                        |
+| 端点                     | 方法 | 描述                                     | 参数（关键）                                                      | 输出示例                                                           | 输入示例                                                |
+|--------------------------|------|------------------------------------------|-------------------------------------------------------------------|--------------------------------------------------------------------|---------------------------------------------------------|
+| /dag/courses             | GET  | 搜索课程先修关系图的所有实体.            | None                                                              | [{"hours":8,"name":"形势与政策",code:"MARX105","credits":0.5},...] | https://localhost:{port}/dag/courses                    |
+| /dag/rels                | GET  | 搜索课程先修关系图的所有关系。           | None                                                              | [{"prerequisite":{...},"end":{...},"rel":{...}},...]               | https://localhost:{port}/dag/rels                       |
+| /course/entities/{title} | GET  | 搜索指定课程的实体。                     | None                                                              | [{key1:value1},{key2:value2},{key3,value3},...]                    | https://localhost:{port}/course/entities/{title}        |
+| /course/rels/{title}     | GET  | 搜索指定课程的关系。                     | None                                                              | [{"start":{...},"end":{...},"rel":{...}},...]                      | https://localhost:{port}/course/rels/{title}            |
+| /search/course           | GET  | 搜索包含查询字符串的节点的属性。         | q (查询字符串)                                                    | [{key1:value1},{key2:value2},{key3:value3},...]                    | https://localhost:{port}/search/course?q=physics        |
+| /search/course/rel       | GET  | 按类型或名称搜索包含查询字符串的关系。   | q (查询字符串)                                                    | [[start_node,rel_name,dst_node],...]                               | https://localhost:{port}/search/course/rel?q=RELATED_TO |
+| /create/entities/{title} | GET  | 使用特定属性创建新节点。                 | title, alias, node_type, properties                               | 数据库内部的返回结果                                               | [create entities](tests/course_async_test.py#L9)        |
+| /update/entities/{title} | GET  | 更新通过唯一属性识别的节点的属性。       | title, identifying_property, new_properties, node_type            | 数据库内部的返回结果                                               | [update entities](tests/course_async_test.py#L22)       |
+| /delete/entities/{title} | GET  | 删除节点及其关系。                       | title, node_type, identifying_property                            | 数据库内部的返回结果                                               | [delete entities](tests/course_async_test.py#L34)       |
+| /create/rel/{title}      | GET  | 创建两个指定节点之间带有指定属性的关系。 | title, node_type1, node_type2, name1, name2, rel_type, properties | 数据库内部的返回结果                                               | [create rels](tests/course_async_test.py#L41)           |
+| /update/rel/{title}      | GET  | 更新两个节点之间关系的属性。             | title, name1, name2, rel_type, new_properties                     | 数据库内部的返回结果                                               | [update rels](tests/course_async_test.py#L55)           |
+| /delete/rel/{title}      | GET  | 删除两个节点之间的关系。                 | title, rel_type, name1, name2                                     | 数据库内部的返回结果                                               | [delete rels](tests/course_async_test.py#L69)           |
+| /vote/course/{title}     | GET  | 为课程增加投票计数器。                   | title                                                             | 数据库内部的返回结果                                               | https://localhsot:{port}/vote/course/CS1605             |
 
+注:
+- /course/rels/CS1605 和 /course/rels/OS 返回的都是空列表,因为没有抽取到有效关系.
+- /search/course?q=xx 和 /search/course/rel?q=xx 如果没找到的话,返回的都是空列表.
