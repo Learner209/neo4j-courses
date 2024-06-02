@@ -1,4 +1,49 @@
-# 数据库大作业知识图谱建立
+# neo4j-courses
+这是 CS3321 数据库最终项目的子模块。该仓库充当我们的项目 Course-Stack 知识图谱后端.
+有关 Course-Stack 的更多信息，请参阅我们的[主要仓库](https://github.com/Simonwzm/CS3321-Course-Stack)。
+
+# 使用指南
+
+## Docker安装(推荐)
+
+1.
+```shell=bash
+docker build -t courses .
+```
+
+2.
+```shell=bash
+docker run -d -p 8080:8000 --name courses courses 
+```
+
+请移步https://localhost:8080 进行操作.
+
+## 本地环境配置
+1. 创建conda环境
+```shell=zsh
+conda create --name neo4j-courses python=3.8
+```
+
+
+2. 安装所需依赖
+```shell=bash
+pip install -r requirements.txt
+```
+
+3. 建立数据库
+
+```shell=bash
+ ./build-neo4j-instances.sh neo4j_prompts
+ ```
+这会默认使用一些端口,如果遇到问题的话请优先查看端口是否被占用:`sudo lsof -i -P -n | grep LISTEN`,占用端口的范围是7474~7484.
+
+4. 使用uvicorn运行FastAPI
+
+```shell=bash
+ python courses_async_post.py --port 8000 --database_dir $HOME/neo4j-instances/ --host "127.0.0.1"
+```
+
+请移步https://localhost:8080 进行操作. 如果启动应用后发现没法正常访问api说明中的端点,请查看是否所有的neo4j实例已经启动,可以通过端口查询,如果没有正常启动的话,可以先`cd`到`$HOME/neo4j-instances/ports/`目录,然后运行`ls | xargs -I{} /bin/bash -c "cd {};./bin/neo4j start;cd -;"`.
 
 
 # 知识图谱需求设计文档:
@@ -308,10 +353,39 @@ Just return the required template, keep your answer as simple and concise as pos
 
 # 知识图谱项目API说明:
 
-[详细说明](./api_specification.md)
+[详细说明](https://github.com/Learner209/neo4j-courses/blob/CRUD/api_specification.md)
 
 # 知识图谱相关代码和可视化展示:
 
-[代码&&可视化](./code_example.md)
+[代码&&可视化](https://github.com/Learner209/neo4j-courses/blob/CRUD/code_example.md)
+
+# 开发进度:
+
+<img src="https://notes.sjtu.edu.cn/uploads/upload_5d512bd66d5964a5c61763dc438b9971.png" alt="知识图谱后端开发时间线" height=300, width=550>
+
+
+
+
+
+
+
+详细阶段描述:
+
+- 需求收集与分析（第8周初）: 收集业务和技术需求，进行初步分析，确定项目范围和目标。
+- 技术选型与工具准备（第8周末至第9周）: 确定使用的技术栈和工具，如Neo4j, FastAPI等，并准备开发环境。
+- 概念验证与设计审查（第8周末至第9周）: 对初步设计进行概念验证，确保设计满足所有业务需求，并进行设计审查。
+- 数据模型设计（第10周初）: 设计详细的数据模型和图结构，包括节点和边的定义。
+- 系统架构设计（第10周末至第11周初）: 设计系统的整体架构，包括前后端分离和服务的模块化。
+- 数据库架构实现（第11周末至第12周初）: 实现图数据库的结构，包括节点和关系的创建。
+- API开发（第12周中至第13周初）: 开发后端API，支持前端数据交互和业务逻辑处理。
+- 数据导入与验证（第14周初）: 导入初始数据并进行验证，确保数据的正确性和完整性。
+- 数据流管理与优化（第14周中）: 管理数据流和优化数据处理过程，提高系统性能。
+- 系统集成测试（第14周末）: 进行全面的系统测试，确保各个模块的正常运作和数据的准确性。
+- 性能优化与调整（第15周初）: 根据测试结果进行性能优化，调整系统配置以满足性能需求。
+- 部署与上线（第15周中）: 完成系统部署，并正式上线。
+- 系统迭代与优化（第15周末）: 根据用户反馈进行系统迭代和功能优化，确保系统的持续改进和更新。
+
+
 
 注:因为知识图谱我们采用的是neo4j,所以上述的E-R图及其转换作为概念存在,实际的存储结构和组织方式由neo4j底层决定.
+
